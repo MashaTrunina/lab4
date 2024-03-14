@@ -24,9 +24,12 @@ public:
 
     void generate(const std::string& filename) {
         std::ofstream file(filename, std::ios::binary);
+        if (!file.is_open()) {
+            std::cerr << "Unable to open file: " << filename << std::endl;
+            return;
+        }
 
         writeHeader(file);
-
         writeImageData(file);
 
         file.close();
@@ -36,12 +39,10 @@ private:
     void writeHeader(std::ofstream& file) {
         int imageDataSize = m_width * m_height * 3;
 
-
         file.put('B').put('M');
         writeInt(file, 14 + 40 + imageDataSize);
         writeInt(file, 0);
         writeInt(file, 14 + 40);
-
 
         writeInt(file, 40);
         writeInt(file, m_width);
@@ -59,21 +60,131 @@ private:
     void writeImageData(std::ofstream& file) {
         std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false));
 
+        // Рисуем рёбра
         for (const auto& edge : m_edges) {
             drawLine(bitmap, m_vertices[edge.vertex1].x, m_vertices[edge.vertex1].y,
                 m_vertices[edge.vertex2].x, m_vertices[edge.vertex2].y);
         }
 
+        // Рисуем вершины и номера рядом с ними
         for (size_t i = 0; i < m_vertices.size(); ++i) {
             drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y);
+
+            // Определяем позицию для номера вершины
+            int labelX = m_vertices[i].x + 7; // Сдвигаем на 7 пикселей вправо
+            int labelY = m_vertices[i].y + 7; // Сдвигаем на 7 пикселей вниз
+
+            // Рисуем номер вершины
+            drawText(bitmap, m_vertices[i].label, labelX, labelY);
         }
 
+        // Записываем данные изображения в файл
         for (int y = m_height - 1; y >= 0; --y) {
             for (int x = 0; x < m_width; ++x) {
-
                 file.put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255))
                     .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255))
                     .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255));
+            }
+        }
+    }
+
+    void drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
+        // Отобразите текст на изображении в позиции (x, y)
+        for (size_t i = 0; i < text.length(); ++i) {
+            drawCharacter(bitmap, text[i], x + i * 6, y); // каждый символ имеет ширину 6 пикселей
+        }
+    }
+
+    void drawCharacter(std::vector<std::vector<bool>>& bitmap, char character, int x, int y) {
+        // Шаблоны символов (для примера)
+        const std::vector<std::vector<std::vector<bool>>> charTemplates = {
+            // Шаблон для цифры 0
+         {
+             {0, 1, 1, 1, 0},
+             {1, 0, 0, 0, 1},
+             {1, 0, 0, 0, 1},
+             {1, 0, 0, 0, 1},
+             {0, 1, 1, 1, 0}
+         },
+            // Шаблон для цифры 1
+            {
+                {0, 0, 1, 0, 0},
+                {0, 1, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {1, 1, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 1, 0, 0, 0},
+                {1, 0, 0, 0, 0},
+                {1, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 0, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0}
+            },
+            {
+                {0, 0, 1, 1, 0},
+                {0, 0, 1, 0, 0},
+                {0, 0, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 0, 0},
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+        };
+
+        // Проверяем, что символ находится в пределах допустимых значений
+        if (character >= '0' && character <= '9') {
+            int index = character - '0'; // Получаем индекс шаблона символа в массиве
+            for (size_t i = 0; i < charTemplates[index].size(); ++i) {
+                for (size_t j = 0; j < charTemplates[index][i].size(); ++j) {
+                    // Рисуем символ, если пиксель в шаблоне равен true
+                    if (charTemplates[index][i][j]) {
+                        // Проверяем, что координаты пикселя находятся в пределах изображения
+                        if (x + j >= 0 && x + j < bitmap[0].size() && y + i >= 0 && y + i < bitmap.size()) {
+                            bitmap[y + i][x + j] = true;
+                        }
+                    }
+                }
             }
         }
     }
@@ -151,31 +262,31 @@ void readInputFromFile(const std::string& filename, int& numVertices, int& width
     }
 }
 
-int main () {
+int main() {
     int numVertices, width, height;
     readInputFromFile("input.txt", numVertices, width, height);
 
     std::vector<Vertex> vertices;
     std::vector<Edge> edges;
 
-    srand(time(NULL));
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
     for (int i = 0; i < numVertices; ++i) {
-        vertices.push_back({ rand() % width, rand() % height, to_string(i) });
-        srand(time(NULL));
-        for (int i = 0; i < numVertices; ++i) {
-            vertices.push_back({ rand() % width, rand() % height, to_string(i) });
-        }
-        for (int i = 0; i < numVertices; ++i) {
-            for (int j = i + 1; j < numVertices; ++j) {
-                if (rand() % 5 == 0) {
-                    Edge edge;
-                    edge.vertex1 = i;
-                    edge.vertex2 = j;
-                    edges.push_back(edge);
-                }
+        vertices.push_back({ std::rand() % width, std::rand() % height, to_string(i) });
+    }
+
+    for (int i = 0; i < numVertices; ++i) {
+        for (int j = i + 1; j < numVertices; ++j) {
+            if (std::rand() % 5 == 0) {
+                Edge edge;
+                edge.vertex1 = i;
+                edge.vertex2 = j;
+                edges.push_back(edge);
             }
         }
-        BMPGenerator bmpGenerator(width, height, vertices, edges);
-        bmpGenerator.generate("graph.bmp");
-        return 0;
     }
+
+    BMPGenerator bmpGenerator(width, height, vertices, edges);
+    bmpGenerator.generate("graph.bmp");
+
+    return 0;
+}
