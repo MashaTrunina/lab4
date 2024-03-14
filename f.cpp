@@ -60,25 +60,21 @@ private:
     void writeImageData(std::ofstream& file) {
         std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false));
 
-        // Рисуем рёбра
+   
         for (const auto& edge : m_edges) {
             drawLine(bitmap, m_vertices[edge.vertex1].x, m_vertices[edge.vertex1].y,
                 m_vertices[edge.vertex2].x, m_vertices[edge.vertex2].y);
         }
-
-        // Рисуем вершины и номера рядом с ними
+    
         for (size_t i = 0; i < m_vertices.size(); ++i) {
             drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y);
 
-            // Определяем позицию для номера вершины
-            int labelX = m_vertices[i].x + 7; // Сдвигаем на 7 пикселей вправо
-            int labelY = m_vertices[i].y + 7; // Сдвигаем на 7 пикселей вниз
+            int labelX = m_vertices[i].x + 7; 
+            int labelY = m_vertices[i].y + 7; 
 
-            // Рисуем номер вершины
             drawText(bitmap, m_vertices[i].label, labelX, labelY);
         }
 
-        // Записываем данные изображения в файл
         for (int y = m_height - 1; y >= 0; --y) {
             for (int x = 0; x < m_width; ++x) {
                 file.put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255))
@@ -89,24 +85,26 @@ private:
     }
 
     void drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
-        // Отобразите текст на изображении в позиции (x, y)
+        int textWidth = text.length() * 6; 
+        int textHeight = 8; 
+
+        drawCircle(bitmap, x + textWidth / 2, y + textHeight / 2);
+
         for (size_t i = 0; i < text.length(); ++i) {
-            drawCharacter(bitmap, text[i], x + i * 6, y); // каждый символ имеет ширину 6 пикселей
+            drawCharacter(bitmap, text[i], x + i * 6, y + 2);
         }
     }
 
+
     void drawCharacter(std::vector<std::vector<bool>>& bitmap, char character, int x, int y) {
-        // Шаблоны символов (для примера)
         const std::vector<std::vector<std::vector<bool>>> charTemplates = {
-            // Шаблон для цифры 0
-         {
-             {0, 1, 1, 1, 0},
-             {1, 0, 0, 0, 1},
-             {1, 0, 0, 0, 1},
-             {1, 0, 0, 0, 1},
-             {0, 1, 1, 1, 0}
-         },
-            // Шаблон для цифры 1
+            {
+                {0, 1, 1, 1, 0},
+                {1, 0, 0, 0, 1},
+                {1, 0, 0, 0, 1},
+                {1, 0, 0, 0, 1},
+                {0, 1, 1, 1, 0}
+            },
             {
                 {0, 0, 1, 0, 0},
                 {0, 1, 1, 0, 0},
@@ -172,16 +170,15 @@ private:
             },
         };
 
-        // Проверяем, что символ находится в пределах допустимых значений
         if (character >= '0' && character <= '9') {
-            int index = character - '0'; // Получаем индекс шаблона символа в массиве
+            int index = character - '0'; 
             for (size_t i = 0; i < charTemplates[index].size(); ++i) {
                 for (size_t j = 0; j < charTemplates[index][i].size(); ++j) {
-                    // Рисуем символ, если пиксель в шаблоне равен true
                     if (charTemplates[index][i][j]) {
-                        // Проверяем, что координаты пикселя находятся в пределах изображения
                         if (x + j >= 0 && x + j < bitmap[0].size() && y + i >= 0 && y + i < bitmap.size()) {
-                            bitmap[y + i][x + j] = true;
+                            if (bitmap[y + i][x + j]) {
+                                bitmap[y + i][x + j] = false;
+                            }
                         }
                     }
                 }
@@ -213,11 +210,13 @@ private:
     }
 
     void drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, int yc) {
-        for (int y = yc - 5; y <= yc + 5; ++y) {
-            for (int x = xc - 5; x <= xc + 5; ++x) {
-                if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
+        int radius = 8; 
+
+        for (int y = yc - radius; y <= yc + radius; ++y) {
+            for (int x = xc - radius; x <= xc + radius; ++x) {
+                if (x >= 0 && x < bitmap[0].size() && y >= 0 && y < bitmap.size()) {
                     double distance = std::sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc));
-                    if (distance <= 5) {
+                    if (distance <= radius) {
                         bitmap[y][x] = true;
                     }
                 }
