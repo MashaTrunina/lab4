@@ -1,4 +1,4 @@
-#include "Vertex.h"
+#include "BMPGenerator.h"
 #include <iostream>
 #include <vector>
 #include <ctime>
@@ -37,7 +37,7 @@ int main() {
     std::vector<Vertex> vertices;
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     for (int i = 0; i < numVertices; ++i) {
-        vertices.push_back({ std::rand() % width, std::rand() % height, to_string(i) });
+        vertices.push_back({ std::rand() % width, std::rand() % height, to_string(i), i }); 
     }
 
     BMPGenerator bmpGenerator(width, height, vertices, edges);
