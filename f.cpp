@@ -133,7 +133,6 @@ private:
     std::vector<Edge> m_edges;
 };
 
-
 template<typename T>
 std::string to_string(T value) {
     std::ostringstream os;
@@ -141,33 +140,42 @@ std::string to_string(T value) {
     return os.str();
 }
 
-int main() {
-    const int numVertices = 100;
-    const int width = 1920;
-    const int height = 1080;
+void readInputFromFile(const std::string& filename, int& numVertices, int& width, int& height) {
+    std::ifstream file(filename);
+    if (file.is_open()) {
+        file >> numVertices >> width >> height;
+        file.close();
+    }
+    else {
+        std::cerr << "Unable to open file: " << filename << std::endl;
+    }
+}
+
+int main () {
+    int numVertices, width, height;
+    readInputFromFile("input.txt", numVertices, width, height);
 
     std::vector<Vertex> vertices;
     std::vector<Edge> edges;
 
-
     srand(time(NULL));
     for (int i = 0; i < numVertices; ++i) {
         vertices.push_back({ rand() % width, rand() % height, to_string(i) });
-    }
-
-    for (int i = 0; i < numVertices; ++i) {
-        for (int j = i + 1; j < numVertices; ++j) {
-            if (rand() % 5 == 0) {
-                Edge edge;
-                edge.vertex1 = i;
-                edge.vertex2 = j;
-                edges.push_back(edge);
+        srand(time(NULL));
+        for (int i = 0; i < numVertices; ++i) {
+            vertices.push_back({ rand() % width, rand() % height, to_string(i) });
+        }
+        for (int i = 0; i < numVertices; ++i) {
+            for (int j = i + 1; j < numVertices; ++j) {
+                if (rand() % 5 == 0) {
+                    Edge edge;
+                    edge.vertex1 = i;
+                    edge.vertex2 = j;
+                    edges.push_back(edge);
+                }
             }
         }
+        BMPGenerator bmpGenerator(width, height, vertices, edges);
+        bmpGenerator.generate("graph.bmp");
+        return 0;
     }
-
-    BMPGenerator bmpGenerator(width, height, vertices, edges);
-    bmpGenerator.generate("graph.bmp");
-
-    return 0;
-}
