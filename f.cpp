@@ -2,7 +2,6 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
-#include <ctime>
 #include <cstdlib>
 #include <sstream>
 
@@ -60,17 +59,17 @@ private:
     void writeImageData(std::ofstream& file) {
         std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false));
 
-   
+
         for (const auto& edge : m_edges) {
             drawLine(bitmap, m_vertices[edge.vertex1].x, m_vertices[edge.vertex1].y,
                 m_vertices[edge.vertex2].x, m_vertices[edge.vertex2].y);
         }
-    
+
         for (size_t i = 0; i < m_vertices.size(); ++i) {
             drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y);
 
-            int labelX = m_vertices[i].x + 7; 
-            int labelY = m_vertices[i].y + 7; 
+            int labelX = m_vertices[i].x + 7;
+            int labelY = m_vertices[i].y + 7;
 
             drawText(bitmap, m_vertices[i].label, labelX, labelY);
         }
@@ -83,10 +82,11 @@ private:
             }
         }
     }
+    
 
     void drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
-        int textWidth = text.length() * 6; 
-        int textHeight = 8; 
+        int textWidth = text.length() * 6;
+        int textHeight = 8;
 
         drawCircle(bitmap, x + textWidth / 2, y + textHeight / 2);
 
@@ -171,7 +171,7 @@ private:
         };
 
         if (character >= '0' && character <= '9') {
-            int index = character - '0'; 
+            int index = character - '0';
             for (size_t i = 0; i < charTemplates[index].size(); ++i) {
                 for (size_t j = 0; j < charTemplates[index][i].size(); ++j) {
                     if (charTemplates[index][i][j]) {
@@ -210,7 +210,7 @@ private:
     }
 
     void drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, int yc) {
-        int radius = 8; 
+        int radius = 8;
 
         for (int y = yc - radius; y <= yc + radius; ++y) {
             for (int x = xc - radius; x <= xc + radius; ++x) {
@@ -236,6 +236,7 @@ private:
             .put(static_cast<char>((value >> 8) & 0xFF));
     }
 
+
 private:
     int m_width;
     int m_height;
@@ -250,10 +251,16 @@ std::string to_string(T value) {
     return os.str();
 }
 
-void readInputFromFile(const std::string& filename, int& numVertices, int& width, int& height) {
+void readInputFromFile(const std::string& filename, int& numVertices, int& width, int& height, std::vector<Edge>& edges) {
     std::ifstream file(filename);
     if (file.is_open()) {
         file >> numVertices >> width >> height;
+
+        int vertex1, vertex2;
+        while (file >> vertex1 >> vertex2) {
+            edges.push_back({ static_cast<size_t>(vertex1), static_cast<size_t>(vertex2) });
+        }
+
         file.close();
     }
     else {
@@ -263,25 +270,13 @@ void readInputFromFile(const std::string& filename, int& numVertices, int& width
 
 int main() {
     int numVertices, width, height;
-    readInputFromFile("input.txt", numVertices, width, height);
+    std::vector<Edge> edges;
+    readInputFromFile("input.txt", numVertices, width, height, edges);
 
     std::vector<Vertex> vertices;
-    std::vector<Edge> edges;
-
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     for (int i = 0; i < numVertices; ++i) {
         vertices.push_back({ std::rand() % width, std::rand() % height, to_string(i) });
-    }
-
-    for (int i = 0; i < numVertices; ++i) {
-        for (int j = i + 1; j < numVertices; ++j) {
-            if (std::rand() % 5 == 0) {
-                Edge edge;
-                edge.vertex1 = i;
-                edge.vertex2 = j;
-                edges.push_back(edge);
-            }
-        }
     }
 
     BMPGenerator bmpGenerator(width, height, vertices, edges);
