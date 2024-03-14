@@ -45,19 +45,36 @@ void BMPGenerator::writeHeader(std::ofstream& file) {
 void BMPGenerator::writeImageData(std::ofstream& file) {
     std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false));
 
-
     for (const auto& edge : m_edges) {
         drawLine(bitmap, m_vertices[edge.vertex1].x, m_vertices[edge.vertex1].y,
             m_vertices[edge.vertex2].x, m_vertices[edge.vertex2].y);
     }
 
     for (size_t i = 0; i < m_vertices.size(); ++i) {
-        drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y);
+        drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y); 
 
-        int labelX = m_vertices[i].x + 7;
-        int labelY = m_vertices[i].y + 7;
+        std::string vertexNumberString = std::to_string(i);
 
-        drawText(bitmap, m_vertices[i].label, labelX, labelY);
+        int offsetX = 0;
+        int offsetY = 0;
+
+        if (vertexNumberString.size() == 1) {
+            offsetX = 4;
+            offsetY = 4;
+        }
+        else if (vertexNumberString.size() == 2) {
+            offsetX = 4;
+            offsetY = 4;
+        }
+        else if (vertexNumberString.size() == 3) {
+            offsetX = 4;
+            offsetY = 4;
+        }
+
+        for (size_t j = 0; j < vertexNumberString.size(); ++j) {
+            drawCharacter(bitmap, vertexNumberString[j], m_vertices[i].x - offsetX, m_vertices[i].y - offsetY);
+            offsetX -= 3;
+        }
     }
 
     for (int y = m_height - 1; y >= 0; --y) {
@@ -68,8 +85,9 @@ void BMPGenerator::writeImageData(std::ofstream& file) {
         }
     }
 }
+void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, int tableNumber, int x, int y) {
+    std::string text = std::to_string(tableNumber);
 
-void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
     int textWidth = text.length() * 6;
     int textHeight = 8;
 
@@ -160,9 +178,7 @@ void BMPGenerator::drawCharacter(std::vector<std::vector<bool>>& bitmap, char ch
             for (size_t j = 0; j < charTemplates[index][i].size(); ++j) {
                 if (charTemplates[index][i][j]) {
                     if (x + j >= 0 && x + j < bitmap[0].size() && y + i >= 0 && y + i < bitmap.size()) {
-                        if (bitmap[y + i][x + j]) {
-                            bitmap[y + i][x + j] = false;
-                        }
+                        bitmap[y + i][x + j] = false; 
                     }
                 }
             }
@@ -201,12 +217,13 @@ void BMPGenerator::drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, in
             if (x >= 0 && x < bitmap[0].size() && y >= 0 && y < bitmap.size()) {
                 double distance = std::sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc));
                 if (distance <= radius) {
-                    bitmap[y][x] = true;
+                    bitmap[y][x] = true; 
                 }
             }
         }
     }
 }
+
 
 void BMPGenerator::writeInt(std::ofstream& file, int value) {
     file.put(static_cast<char>(value & 0xFF))
@@ -218,21 +235,4 @@ void BMPGenerator::writeInt(std::ofstream& file, int value) {
 void BMPGenerator::writeShort(std::ofstream& file, short value) {
     file.put(static_cast<char>(value & 0xFF))
         .put(static_cast<char>((value >> 8) & 0xFF));
-}
-
-void BMPGenerator::readInputFromFile(const std::string& filename, int& numVertices, int& width, int& height, std::vector<Edge>& edges) {
-    std::ifstream file(filename);
-    if (file.is_open()) {
-        file >> numVertices >> width >> height;
-
-        int vertex1, vertex2;
-        while (file >> vertex1 >> vertex2) {
-            edges.push_back({ static_cast<size_t>(vertex1), static_cast<size_t>(vertex2) });
-        }
-
-        file.close();
-    }
-    else {
-        std::cerr << "Unable to open file: " << filename << std::endl;
-    }
 }
