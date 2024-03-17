@@ -11,7 +11,7 @@ void BMPGenerator::generate(const std::string& filename) {
 }
 
 void BMPGenerator::writeHeader(std::ofstream& file) {
-     int imageDataSize = m_width * m_height * 3; // Вычисление размера данных изображения
+    int imageDataSize = m_width * m_height * 3; // Вычисление размера данных изображения
 
     // Запись заголовка BMP
     file.put('B').put('M'); // Числа для определения формата файла
@@ -64,7 +64,7 @@ void BMPGenerator::writeImageData(std::ofstream& file) {
 
 void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
     int labelWidth = text.length() * 10;
-    int labelHeight = 20;
+    int labelHeight = 12;
     int labelX = x - labelWidth / 10;
     int labelY = y - labelHeight / 10;
 
@@ -86,6 +86,7 @@ void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, const std::s
         drawCharacter(bitmap, text[i], labelX + i * 6, labelY + labelHeight / 2 - 3); // Отрисовка отдельного символа
     }
 }
+
 
 void BMPGenerator::drawCharacter(std::vector<std::vector<bool>>& bitmap, char character, int x, int y) {
     const std::vector<std::vector<std::vector<bool>>> charTemplates = {
@@ -180,6 +181,11 @@ void BMPGenerator::drawCharacter(std::vector<std::vector<bool>>& bitmap, char ch
 void BMPGenerator::drawLine(std::vector<std::vector<bool>>& bitmap, int x0, int y0, int x1, int y1) {
     int dx = std::abs(x1 - x0); // Приращение по X
     int dy = std::abs(y1 - y0); // Приращение по Y
+
+    // Проверка длины ребра
+    if (dx < 30 || dy < 30)
+        return;
+
     int sx = x0 < x1 ? 1 : -1; // Направление по X
     int sy = y0 < y1 ? 1 : -1; // Направление по Y
     int err = dx - dy; // Ошибка
@@ -202,12 +208,13 @@ void BMPGenerator::drawLine(std::vector<std::vector<bool>>& bitmap, int x0, int 
 }
 
 void BMPGenerator::drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, int yc) {
-    // Отрисовка круга с радиусом 5 пикселей
-    for (int y = yc - 5; y <= yc + 5; ++y) {
-        for (int x = xc - 5; x <= xc + 5; ++x) {
+    // Отрисовка круга с радиусом 7 пикселей
+    int radius = 7;
+    for (int y = yc - radius; y <= yc + radius; ++y) {
+        for (int x = xc - radius; x <= xc + radius; ++x) {
             if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
                 double distance = std::sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc)); // Вычисление расстояния от центра круга
-                if (distance <= 5) { // Если расстояние меньше или равно радиусу круга
+                if (distance <= radius) { // Если расстояние меньше или равно радиусу круга
                     bitmap[y][x] = true;
                 }
             }
