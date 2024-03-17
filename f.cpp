@@ -1,4 +1,12 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
 #include <cstdlib>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <ctime>
 #include "BMPGenerator.h"
 #include "FileReader.h"
 
@@ -24,8 +32,18 @@ int main() {
 
     readEdgesFromFile("edge_data.txt", edges);
 
-    BMPGenerator bmpGenerator(width, height, vertices, edges);
-    bmpGenerator.generate("graph.bmp");
+    int numEdges = edges.size();
+    int numFaces = 2 - numVertices + numEdges;
+
+    if (numFaces <= 2) {
+        std::cout << "Graph is planar." << std::endl;
+
+        BMPGenerator bmpGenerator(width, height, vertices, edges);
+        bmpGenerator.generate("graph.bmp");
+    }
+    else {
+        std::cout << "Graph is not planar." << std::endl;
+    }
 
     return 0;
 }
