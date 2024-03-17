@@ -1,252 +1,175 @@
 #include "BMPGenerator.h"
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <cstdlib>
-#include <sstream>
-#include <vector>
-#include <algorithm>
 
 BMPGenerator::BMPGenerator(int width, int height, const std::vector<Vertex>& vertices, const std::vector<Edge>& edges)
     : m_width(width), m_height(height), m_vertices(vertices), m_edges(edges) {}
 
 void BMPGenerator::generate(const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Unable to open file: " << filename << std::endl;
-        return;
-    }
-
     writeHeader(file);
     writeImageData(file);
-
     file.close();
 }
 
 void BMPGenerator::writeHeader(std::ofstream& file) {
-    int imageDataSize = m_width * m_height * 3;
+     int imageDataSize = m_width * m_height * 3; // Вычисление размера данных изображения
 
-    file.put('B').put('M');
-    writeInt(file, 14 + 40 + imageDataSize);
-    writeInt(file, 0);
-    writeInt(file, 14 + 40);
+    // Запись заголовка BMP
+    file.put('B').put('M'); // Числа для определения формата файла
+    writeInt(file, 14 + 40 + imageDataSize); // Размер файла
+    writeInt(file, 0); // Зарезервированное поле
+    writeInt(file, 14 + 40); // Смещение до начала данных изображения
 
-    writeInt(file, 40);
-    writeInt(file, m_width);
-    writeInt(file, m_height);
-    writeShort(file, 1);
-    writeShort(file, 24);
-    writeInt(file, 0);
-    writeInt(file, imageDataSize);
-    writeInt(file, 2835);
-    writeInt(file, 2835);
-    writeInt(file, 0);
-    writeInt(file, 0);
+    // Запись информации о заголовке изображения
+    writeInt(file, 40); // Размер информационного заголовка
+    writeInt(file, m_width); // Ширина изображения
+    writeInt(file, m_height); // Высота изображения
+    writeShort(file, 1); // Число плоскостей
+    writeShort(file, 24); // Глубина цвета (24 бита на пиксель)
+    writeInt(file, 0); // Тип сжатия 
+    writeInt(file, imageDataSize); // Размер данных изображения
+    writeInt(file, 2835); // Горизонтальное разрешение (пикселей на метр)
+    writeInt(file, 2835); // Вертикальное разрешение (пикселей на метр)
+    writeInt(file, 0); // Количество используемых цветов (0 - все цвета)
+    writeInt(file, 0); // Количество основных цветов (0 - все цвета)
 }
 
 void BMPGenerator::writeImageData(std::ofstream& file) {
-    std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false));
+    std::vector<std::vector<bool>> bitmap(m_height, std::vector<bool>(m_width, false)); // Создание битовой карты
 
-    // Apply Fruchterman-Reingold layout algorithm
-    applyFruchtermanReingoldLayout(bitmap);
-
-    // Draw lines between vertices
+    // Отрисовка ребер графа на изображении
     for (const auto& edge : m_edges) {
         drawLine(bitmap, m_vertices[edge.vertex1].x, m_vertices[edge.vertex1].y,
             m_vertices[edge.vertex2].x, m_vertices[edge.vertex2].y);
     }
 
-    // Draw vertices
+    // Отрисовка вершин графа на изображении
     for (size_t i = 0; i < m_vertices.size(); ++i) {
-        drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y);
+        drawCircle(bitmap, m_vertices[i].x, m_vertices[i].y); // Отрисовка вершины графа
 
-        std::string vertexNumberString = std::to_string(i);
+        int labelX = m_vertices[i].x + 7;
+        int labelY = m_vertices[i].y + 7;
 
-        int offsetX = 0;
-        int offsetY = 0;
-
-        if (vertexNumberString.size() == 1) {
-            offsetX = 4;
-            offsetY = 4;
-        }
-        else if (vertexNumberString.size() == 2) {
-            offsetX = 4;
-            offsetY = 4;
-        }
-        else if (vertexNumberString.size() == 3) {
-            offsetX = 4;
-            offsetY = 4;
-        }
-
-        for (size_t j = 0; j < vertexNumberString.size(); ++j) {
-            drawCharacter(bitmap, vertexNumberString[j], m_vertices[i].x - offsetX, m_vertices[i].y - offsetY);
-            offsetX -= 3;
-        }
+        drawText(bitmap, m_vertices[i].label, labelX, labelY); // Отрисовка метки вершины
     }
 
-    // Write bitmap data to file
+    // Запись данных изображения в файл
     for (int y = m_height - 1; y >= 0; --y) {
         for (int x = 0; x < m_width; ++x) {
-            file.put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255))
-                .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255))
-                .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255));
+            file.put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255)) // Запись цвета пикселя
+                .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255)) // Запись цвета пикселя
+                .put(bitmap[y][x] ? static_cast<char>(0) : static_cast<char>(255)); // Запись цвета пикселя
         }
     }
 }
 
-void BMPGenerator::applyFruchtermanReingoldLayout(std::vector<std::vector<bool>>& bitmap) {
-    // Constants for Fruchterman-Reingold algorithm
-    const double k = sqrt(static_cast<double>(m_width * m_height) / m_vertices.size()); // Ideal edge length
-    const double initialTemperature = m_width / 10.0; // Initial "temperature" for the simulation
-    const double coolingFactor = 0.99; // Cooling factor to reduce temperature over iterations
-    const int maxIterations = 1000; // Maximum number of iterations
+void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, const std::string& text, int x, int y) {
+    int labelWidth = text.length() * 10;
+    int labelHeight = 20;
+    int labelX = x - labelWidth / 10;
+    int labelY = y - labelHeight / 10;
 
-    // Initialize random positions for vertices
-    std::vector<std::pair<double, double>> positions(m_vertices.size());
-    for (size_t i = 0; i < m_vertices.size(); ++i) {
-        positions[i].first = static_cast<double>(rand() % m_width);
-        positions[i].second = static_cast<double>(rand() % m_height);
+    // Проверка на выход за границы изображения
+    if (labelX < 0 || labelX + labelWidth >= m_width || labelY < 0 || labelY + labelHeight >= m_height) {
+        return;
     }
-
-    double temperature = initialTemperature;
-
-    // Perform Fruchterman-Reingold algorithm iterations
-    for (int iter = 0; iter < maxIterations; ++iter) {
-        // Calculate repulsive forces between vertices
-        std::vector<std::pair<double, double>> forces(m_vertices.size(), { 0.0, 0.0 });
-        for (size_t i = 0; i < m_vertices.size(); ++i) {
-            for (size_t j = 0; j < m_vertices.size(); ++j) {
-                if (i != j) {
-                    double dx = positions[i].first - positions[j].first;
-                    double dy = positions[i].second - positions[j].second;
-                    double distanceSquared = dx * dx + dy * dy;
-                    if (distanceSquared > 0) {
-                        double force = k * k / distanceSquared;
-                        forces[i].first += force * dx / sqrt(distanceSquared);
-                        forces[i].second += force * dy / sqrt(distanceSquared);
-                    }
-                }
-            }
-        }
-
-        // Update vertex positions
-        for (size_t i = 0; i < m_vertices.size(); ++i) {
-            double displacement = sqrt(forces[i].first * forces[i].first + forces[i].second * forces[i].second);
-            double dx = forces[i].first / displacement * std::min(displacement, temperature);
-            double dy = forces[i].second / displacement * std::min(displacement, temperature);
-            positions[i].first += dx;
-            positions[i].second += dy;
-
-            // Keep vertices within image bounds
-            positions[i].first = std::max(0.0, std::min(static_cast<double>(m_width - 1), positions[i].first));
-            positions[i].second = std::max(0.0, std::min(static_cast<double>(m_height - 1), positions[i].second));
-        }
-
-        // Cool down temperature
-        temperature *= coolingFactor;
+    // Отрисовка рамки вокруг текста
+    for (int i = 0; i < labelWidth; ++i) {
+        bitmap[labelY][labelX + i] = true; // Верхняя граница
+        bitmap[labelY + labelHeight][labelX + i] = true; // Нижняя граница
     }
-
-    // Update vertex positions after layout calculation
-    for (size_t i = 0; i < m_vertices.size(); ++i) {
-        m_vertices[i].x = static_cast<int>(positions[i].first);
-        m_vertices[i].y = static_cast<int>(positions[i].second);
+    for (int i = 0; i < labelHeight; ++i) {
+        bitmap[labelY + i][labelX] = true; // Левая граница
+        bitmap[labelY + i][labelX + labelWidth] = true; // Правая граница
     }
-}
-
-void BMPGenerator::drawText(std::vector<std::vector<bool>>& bitmap, int tableNumber, int x, int y) {
-    std::string text = std::to_string(tableNumber);
-
-    int textWidth = text.length() * 6;
-    int textHeight = 8;
-
-    drawCircle(bitmap, x + textWidth / 2, y + textHeight / 2);
-
+    // Отрисовка символов текста
     for (size_t i = 0; i < text.length(); ++i) {
-        drawCharacter(bitmap, text[i], x + i * 6, y + 2);
+        drawCharacter(bitmap, text[i], labelX + i * 6, labelY + labelHeight / 2 - 3); // Отрисовка отдельного символа
     }
 }
 
 void BMPGenerator::drawCharacter(std::vector<std::vector<bool>>& bitmap, char character, int x, int y) {
     const std::vector<std::vector<std::vector<bool>>> charTemplates = {
-          {
-              {0, 1, 1, 1, 0},
-              {1, 0, 0, 0, 1},
-              {1, 0, 0, 0, 1},
-              {1, 0, 0, 0, 1},
-              {0, 1, 1, 1, 0}
-          },
-          {
-              {0, 0, 1, 0, 0},
-              {0, 1, 1, 0, 0},
-              {0, 0, 1, 0, 0},
-              {0, 0, 1, 0, 0},
-              {0, 1, 1, 1, 0}
-          },
-          {
-              {1, 1, 1, 0, 0},
-              {0, 0, 1, 0, 0},
-              {0, 1, 0, 0, 0},
-              {1, 0, 0, 0, 0},
-              {1, 1, 1, 1, 0}
-          },
-          {
-              {0, 1, 1, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 1, 1, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 1, 1, 1, 0}
-          },
-          {
-              {0, 1, 0, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 1, 1, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 0, 0, 1, 0}
-          },
-          {
-              {0, 0, 1, 1, 0},
-              {0, 0, 1, 0, 0},
-              {0, 0, 1, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 0, 1, 1, 0}
-          },
-          {
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 0, 0},
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 1, 1, 1, 0}
-          },
-          {
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 0, 0, 1, 0}
-          },
-          {
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 1, 1, 1, 0}
-          },
-          {
-              {0, 1, 1, 1, 0},
-              {0, 1, 0, 1, 0},
-              {0, 1, 1, 1, 0},
-              {0, 0, 0, 1, 0},
-              {0, 1, 1, 1, 0}
-          },
+             {
+                {0, 1, 1, 1, 0},
+                {1, 0, 0, 0, 1},
+                {1, 0, 0, 0, 1},
+                {1, 0, 0, 0, 1},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 0, 1, 0, 0},
+                {0, 1, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {1, 1, 1, 0, 0},
+                {0, 0, 1, 0, 0},
+                {0, 1, 0, 0, 0},
+                {1, 0, 0, 0, 0},
+                {1, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 0, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0}
+            },
+            {
+                {0, 0, 1, 1, 0},
+                {0, 0, 1, 0, 0},
+                {0, 0, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 0, 0},
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 0, 0, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
+            {
+                {0, 1, 1, 1, 0},
+                {0, 1, 0, 1, 0},
+                {0, 1, 1, 1, 0},
+                {0, 0, 0, 1, 0},
+                {0, 1, 1, 1, 0}
+            },
     };
 
+    // Проверка на то, что символ является цифрой
     if (character >= '0' && character <= '9') {
-        int index = character - '0';
+        int index = character - '0'; // Индекс символа
+        // Отрисовка символа по матрице
         for (size_t i = 0; i < charTemplates[index].size(); ++i) {
             for (size_t j = 0; j < charTemplates[index][i].size(); ++j) {
-                if (charTemplates[index][i][j]) {
+                if (charTemplates[index][i][j]) { // Если в матрице на данной позиции стоит единица
                     if (x + j >= 0 && x + j < bitmap[0].size() && y + i >= 0 && y + i < bitmap.size()) {
-                        bitmap[y + i][x + j] = false;
+                        bitmap[y + i][x + j] = true; // Отрисовка пикселя
                     }
                 }
             }
@@ -255,12 +178,13 @@ void BMPGenerator::drawCharacter(std::vector<std::vector<bool>>& bitmap, char ch
 }
 
 void BMPGenerator::drawLine(std::vector<std::vector<bool>>& bitmap, int x0, int y0, int x1, int y1) {
-    int dx = std::abs(x1 - x0);
-    int dy = std::abs(y1 - y0);
-    int sx = x0 < x1 ? 1 : -1;
-    int sy = y0 < y1 ? 1 : -1;
-    int err = dx - dy;
+    int dx = std::abs(x1 - x0); // Приращение по X
+    int dy = std::abs(y1 - y0); // Приращение по Y
+    int sx = x0 < x1 ? 1 : -1; // Направление по X
+    int sy = y0 < y1 ? 1 : -1; // Направление по Y
+    int err = dx - dy; // Ошибка
 
+    // Отрисовка линии методом Брезенхэма
     while (x0 != x1 || y0 != y1) {
         if (x0 >= 0 && x0 < m_width && y0 >= 0 && y0 < m_height) {
             bitmap[y0][x0] = true;
@@ -278,13 +202,12 @@ void BMPGenerator::drawLine(std::vector<std::vector<bool>>& bitmap, int x0, int 
 }
 
 void BMPGenerator::drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, int yc) {
-    int radius = 8;
-
-    for (int y = yc - radius; y <= yc + radius; ++y) {
-        for (int x = xc - radius; x <= xc + radius; ++x) {
-            if (x >= 0 && x < bitmap[0].size() && y >= 0 && y < bitmap.size()) {
-                double distance = std::sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc));
-                if (distance <= radius) {
+    // Отрисовка круга с радиусом 5 пикселей
+    for (int y = yc - 5; y <= yc + 5; ++y) {
+        for (int x = xc - 5; x <= xc + 5; ++x) {
+            if (x >= 0 && x < m_width && y >= 0 && y < m_height) {
+                double distance = std::sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc)); // Вычисление расстояния от центра круга
+                if (distance <= 5) { // Если расстояние меньше или равно радиусу круга
                     bitmap[y][x] = true;
                 }
             }
@@ -293,12 +216,16 @@ void BMPGenerator::drawCircle(std::vector<std::vector<bool>>& bitmap, int xc, in
 }
 
 void BMPGenerator::writeInt(std::ofstream& file, int value) {
-    file.put(static_cast<char>(value & 0xFF))
-        .put(static_cast<char>((value >> 8) & 0xFF))
-        .put(static_cast<char>((value >> 16) & 0xFF))
-        .put(static_cast<char>((value >> 24) & 0xFF));
+    file.put(static_cast<char>(value & 0xFF)) // Младший байт
+        .put(static_cast<char>((value >> 8) & 0xFF)) // Второй байт
+        .put(static_cast<char>((value >> 16) & 0xFF)) // Третий байт
+        .put(static_cast<char>((value >> 24) & 0xFF)); // Старший байт
 }
 
+void BMPGenerator::writeShort(std::ofstream& file, short value) {
+    file.put(static_cast<char>(value & 0xFF)) // Младший байт
+        .put(static_cast<char>((value >> 8) & 0xFF)); // Старший байт
+}
 void BMPGenerator::writeShort(std::ofstream& file, short value) {
     file.put(static_cast<char>(value & 0xFF))
         .put(static_cast<char>((value >> 8) & 0xFF));
